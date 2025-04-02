@@ -32,6 +32,20 @@ class UpworkSearchBuilder:
         self.params["duration"] = length
         return self
 
+    def set_hours_per_week(self, workload):
+        # workload: "as_needed" or "full_time"
+        self.params["workload"] = workload
+        return self
+
+    def set_client_history(self, history):
+        # history: "0", "1-9", "10plus"
+        self.params["client_hires"] = history
+        return self
+
+    def set_contract_to_hire(self, value):
+        self.params["contract_to_hire"] = "true" if value else "false"
+        return self
+
     def build(self):
         query_string = urllib.parse.urlencode(self.params)
         return f"{self.base_url}?{query_string}"
@@ -45,9 +59,6 @@ def scrape_jobs(url):
         # Sayfa içeriğini kaydet (debug için)
         with open("debug_page.html", "w", encoding="utf-8") as f:
             f.write(page.content())
-
-        # Burada beklemeyi yoruma aldık çünkü sayfa yavaş yükleniyorsa hata veriyor olabilir
-        # page.wait_for_selector("article[data-test='JobTile']", timeout=30000)
 
         job_cards = page.query_selector_all("article[data-test='JobTile']")
 
@@ -97,6 +108,9 @@ def search():
     duration = request.args.get("duration")
     rate_min = request.args.get("rate_min")
     rate_max = request.args.get("rate_max")
+    workload = request.args.get("workload")
+    client_hires = request.args.get("client_hires")
+    contract_to_hire = request.args.get("contract_to_hire")
 
     builder = UpworkSearchBuilder()
     builder.set_query(q)
@@ -109,6 +123,12 @@ def search():
     if rate_min or rate_max:
         builder.set_hourly_rate(min_rate=int(rate_min) if rate_min else None,
                                 max_rate=int(rate_max) if rate_max else None)
+    if workload:
+        builder.set_hours_per_week(workload)
+    if client_hires:
+        builder.set_client_history(client_hires)
+    if contract_to_hire:
+        builder.set_contract_to_hire(contract_to_hire.lower() == "true")
 
     search_url = builder.build()
     print(f"🔍 Arama URL: {search_url}")
